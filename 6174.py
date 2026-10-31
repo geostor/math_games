@@ -1,4 +1,4 @@
-"""The 6174 trick (Kaprekar's routine): a magic number game for kids.
+"""The 6174 trick (Kaprekar's routine): a vault-cracking game for kids.
 
 Notes for grown-ups (none of this is shown to the player):
 
@@ -37,39 +37,23 @@ Notes:
       who discovered it in 1949.
 
 How the game plays:
-    The player picks the starting number and guesses how many turns it
-    will take. On each turn they arrange the digits biggest-first and
-    smallest-first and do the subtraction themselves. A sealed envelope
-    with the prediction "6174" is opened when they reach it.
+    The vault has a secret code (6174). The player types any four-digit
+    code into the lock and guesses how many turns it will take to crack
+    it. On each turn they arrange the digits biggest-first and
+    smallest-first and do the subtraction themselves, and the answer
+    becomes the new code on the lock's dials. When the dials reach 6174
+    the vault opens, and they collect a gold coin for every step they
+    got right on their own. Playing again with a different code shows
+    the vault always opens at the same code.
 
 Source: https://www.learn-with-math-games.com/math-tricks-for-kids.html
 """
 
 import time
 
-MAGIC = 6174
+SECRET_CODE = 6174
 MAX_TRIES = 2
-
-SEALED_ENVELOPE = r"""
-     _____________________
-    |\                   /|
-    | \                 / |
-    |  \_______________/  |
-    |                     |
-    |  MY PREDICTION      |
-    |  (top secret!)      |
-    |_____________________|
-"""
-
-OPENED_ENVELOPE = r"""
-     _____________________
-    |                     |
-    |   My prediction:    |
-    |                     |
-    |  You will land on   |
-    |      ** 6174 **     |
-    |_____________________|
-"""
+LOCK_WIDTH = 27
 
 
 def pause(seconds=0.8):
@@ -81,43 +65,89 @@ def four(n):
     return f"{n:04d}"
 
 
+def show_lock(code, unlocked=False):
+    """Draw the vault's combination lock with the code on its dials."""
+    dials = "  ".join(f"[{d}]" for d in four(code))
+    status = "*** UNLOCKED! ***" if unlocked else "LOCKED"
+    print(f"""
+     {"_" * LOCK_WIDTH}
+    |  {"_" * (LOCK_WIDTH - 4)}  |
+    | |{dials:^{LOCK_WIDTH - 4}}| |
+    | |{"_" * (LOCK_WIDTH - 4)}| |
+    |{status:^{LOCK_WIDTH}}|
+    |{"_" * LOCK_WIDTH}|
+""")
+
+
+def spin_dials(code):
+    print("  Spinning the dials", end="", flush=True)
+    for _ in range(3):
+        pause(0.4)
+        print(" click", end="", flush=True)
+    pause(0.4)
+    print()
+    show_lock(code)
+
+
+def show_vault_open(coins):
+    print("""
+     ___________________________
+    |                           |
+    |   THE VAULT DOOR OPENS!   |
+    |                           |
+    |      $   $   $   $   $    |
+    |    $   TREASURE!   $      |
+    |      $   $   $   $   $    |
+    |___________________________|
+""")
+    if coins is None:
+        print("The whole treasure is yours!")
+    elif coins:
+        print(f"You found {coins} gold coin(s): " + "$" * coins)
+    else:
+        print("The vault is open! Get your math right next time for gold coins!")
+
+
 def show_intro():
     print("=" * 44)
-    print("          THE MAGIC NUMBER MACHINE")
+    print("          CRACK THE SECRET VAULT")
     print("=" * 44)
     print("""
-Pick ANY four-digit number, and I'll show you
-that it always ends up in the same place!
+There's a vault full of treasure, and it's
+locked with a secret 4-digit code.
 
-Here's how each turn works:
+You don't know the code... but you don't need
+to! Type in ANY code, then use this math spell
+to change it, one turn at a time:
 
   1. Put the digits in order, BIGGEST first.
   2. Put the digits in order, SMALLEST first.
   3. Subtract: biggest number - smallest number.
-  4. Your answer is the number for the next turn!
+  4. Your answer is the new code on the lock!
 
-Keep going until something magic happens.
+Keep casting the spell until the vault opens.
+Every step you get right earns a gold coin.
 
-Tip: always keep 4 digits. If you get 999,
-it's really 0999!
+Tip: codes always have 4 digits. If you get
+999, the code is really 0999!
 """)
 
 
-def ask_start_number():
+def ask_start_code():
     while True:
-        text = input("Type a four-digit number: ").strip()
+        text = input("Type any 4-digit code into the lock: ").strip()
         if len(text) != 4 or not text.isdigit():
-            print("Oops! It needs to be exactly 4 digits, like 3524.")
+            print("Oops! The lock needs exactly 4 digits, like 3524.")
         elif len(set(text)) == 1:
-            print("Sneaky! All the digits are the same. "
-                  "Use at least two different digits.")
+            print("The lock won't take a code with all the same digits. "
+                  "Try at least two different digits!")
         else:
             return int(text)
 
 
 def ask_guess():
     while True:
-        text = input("How many turns do you think it will take? ").strip()
+        text = input("How many turns do you think it will take to open? ").strip()
         if text.isdigit() and int(text) > 0:
             return int(text)
         print("Type a number, like 3 or 10.")
@@ -131,7 +161,7 @@ def ask_answer(question, correct, hint):
     for attempt in range(MAX_TRIES):
         text = input(question).strip()
         if text.isdigit() and int(text) == correct:
-            print("  Correct!")
+            print("  Correct! +1 gold coin")
             return True
         if attempt < MAX_TRIES - 1:
             print(f"  Not quite. {hint}")
@@ -140,80 +170,80 @@ def ask_answer(question, correct, hint):
 
 
 def play_round():
-    print("Before we start, I've sealed my prediction in this envelope.")
-    print("No peeking!")
-    print(SEALED_ENVELOPE)
+    current = ask_start_code()
+    show_lock(current)
 
-    current = ask_start_number()
-    if current == MAGIC:
-        print("\nWhoa, you picked my secret number! Let's open the envelope...")
+    if current == SECRET_CODE:
+        print("Wait... the lock is clicking...")
         pause()
-        print(OPENED_ENVELOPE)
-        print("Are you reading MY mind? Pick a different number next time!\n")
+        show_lock(current, unlocked=True)
+        print("WHOA! You typed the secret code on your very first try!")
+        print("Are you a master safe-cracker?!")
+        show_vault_open(None)
+        print()
         return
+
+    print("The lock says: LOCKED. Time to cast the math spell!\n")
     guess = ask_guess()
-    print(f"\nOkay! Let's feed {four(current)} into the Magic Number Machine...\n")
-    pause()
+    print()
 
-    path = [current]
+    codes = [current]
     turns = 0
-    stars = 0
+    coins = 0
 
-    while current != MAGIC:
+    while current != SECRET_CODE:
         turns += 1
-        digits = sorted(str(current).zfill(4))
+        digits = sorted(four(current))
         largest = int("".join(reversed(digits)))
         smallest = int("".join(digits))
         answer = largest - smallest
 
         print("-" * 44)
-        print(f"TURN {turns}   Your number: {four(current)}")
+        print(f"TURN {turns}   Code on the lock: {four(current)}")
         print("-" * 44)
 
         if ask_answer("Digits BIGGEST first: ", largest,
                       "Start with the biggest digit."):
-            stars += 1
+            coins += 1
         if ask_answer("Digits SMALLEST first: ", smallest,
                       "Start with the smallest digit (zeros go first!)."):
-            stars += 1
+            coins += 1
         print(f"\n  Now subtract:  {four(largest)}")
         print(f"               - {four(smallest)}")
         print("               ------")
         if ask_answer("  Your answer: ", answer,
                       "Check your borrowing and try again."):
-            stars += 1
+            coins += 1
 
         current = answer
-        path.append(current)
+        codes.append(current)
         print()
-        print("  Your path so far: " + " -> ".join(four(n) for n in path))
-        print()
-        pause(0.5)
+        spin_dials(current)
 
-    print("=" * 44)
-    print("  STOP! The machine landed on 6174!")
-    print("=" * 44)
+        if current != SECRET_CODE:
+            print("  Still LOCKED. Codes tried: "
+                  + " -> ".join(four(n) for n in codes))
+            print()
+            pause(0.5)
+
+    print("  ...wait... something's happening...")
     pause()
-    print("\nLet's open my envelope", end="", flush=True)
-    for _ in range(3):
-        pause()
-        print(".", end="", flush=True)
+    print("  CLICK! CLICK! CLUNK!")
     pause()
-    print()
-    print(OPENED_ENVELOPE)
+    show_lock(current, unlocked=True)
+    print(f"YOU CRACKED THE CODE: {four(SECRET_CODE)}!")
+    print("Your codes: " + " -> ".join(four(n) for n in codes))
     pause(0.5)
+    show_vault_open(coins)
 
-    print(f"You reached the magic number in {turns} turn(s)!")
+    print()
+    print(f"It took {turns} turn(s) to crack the vault.")
     if guess == turns:
-        print(f"You guessed {guess}. EXACTLY right! Are YOU a mind reader?")
+        print(f"You guessed {guess}. EXACTLY right!")
     else:
-        off = abs(guess - turns)
-        print(f"You guessed {guess}, so you were {off} away.")
-
-    possible = turns * 3
-    print(f"You earned {stars} out of {possible} stars: " + "*" * stars)
-    if stars == possible:
-        print("Perfect math! Amazing!")
+        print(f"You guessed {guess}, so you were {abs(guess - turns)} away.")
+    if coins == turns * 3:
+        print("You got every step right. Perfect safe-cracking!")
     print()
 
 
@@ -224,16 +254,17 @@ def main():
     while True:
         play_round()
         if round_number == 1:
-            question = "Think a different number will land somewhere else? Try it! (y/n) "
+            question = ("Do you think a DIFFERENT starting code would open "
+                        "the vault too? Try it! (y/n) ")
         else:
-            question = "Want to try another number? (y/n) "
+            question = "Want to crack the vault with another code? (y/n) "
         again = input(question).strip().lower()
         if not again.startswith("y"):
-            print("\nThanks for playing! Ask a grown-up to pick a number,")
-            print("then predict where it'll end up. You know the secret now!")
+            print("\nThanks for playing! Now you know the vault's secret code.")
+            print("Ask a friend to try ANY code and watch it open at 6174!")
             break
         round_number += 1
-        print()
+        print("\nThe vault slams shut and locks again... CLUNK!\n")
 
 
 if __name__ == "__main__":
