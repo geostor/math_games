@@ -11,7 +11,8 @@ How the game plays:
        the prediction was written down before they picked anything.
        (Peeking is fine: the trick still works, which makes it even
        spookier.)
-    2. The player sees a grid of numbers in order (1-16 on a 4x4 board).
+    2. The player sees a grid of numbers in order, such as 1-16 on a
+       4x4 board. The board size is picked at random (3x3 to 6x6).
     3. They circle any number. Everything else in that row and column is
        crossed out.
     4. They keep circling numbers that aren't crossed out until every
@@ -31,13 +32,20 @@ Why it works:
         (1 + 5 + 9 + 13) + (0 + 1 + 2 + 3) = 28 + 6 = 34
     no matter which numbers are picked.
 
-Playing again:
+Other board sizes:
     The page suggests a different board the second time so the
-    prediction isn't the same. Round 2 uses a 5x5 board of 1-25, which
-    always gives 65. In general an n x n board gives n * (n*n + 1) / 2.
+    prediction isn't the same. Each round picks a random size from 3x3
+    to 6x6, never the same size twice in a row. An n x n board always
+    gives n * (n*n + 1) / 2:
+        3x3 (1-9)  -> 15      5x5 (1-25) -> 65
+        4x4 (1-16) -> 34      6x6 (1-36) -> 111
 """
 
+import random
 import time
+
+# Every square board works. Bigger than 6x6 gets hard to read and add.
+BOARD_SIZES = [3, 4, 5, 6]
 
 SEALED_ENVELOPE = r"""
      _____________________
@@ -202,7 +210,7 @@ def play_round(size):
 
 def main():
     show_intro()
-    size = 4
+    size = random.choice(BOARD_SIZES)
 
     while True:
         play_round(size)
@@ -210,10 +218,12 @@ def main():
         if not again.startswith("y"):
             print("\nThanks for playing! Try the trick on your friends!")
             break
-        # Switch boards each round so the prediction isn't the same twice.
-        size = 5 if size == 4 else 4
-        print("\nLet's use a BIGGER board this time!\n" if size == 5
-              else "\nBack to the smaller board!\n")
+        # Pick a different board each round so the prediction isn't the
+        # same twice in a row.
+        old_size = size
+        size = random.choice([s for s in BOARD_SIZES if s != old_size])
+        bigger = "BIGGER" if size > old_size else "smaller"
+        print(f"\nLet's try a {bigger} {size}x{size} board this time!\n")
 
 
 if __name__ == "__main__":
